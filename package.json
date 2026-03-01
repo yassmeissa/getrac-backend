@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
-    "start": "ts-node src/server.ts"
+    "start": "node dist/server.js",
+    "build": "tsc"
   },
   "dependencies": {
     "cors": "^2.8.6",
