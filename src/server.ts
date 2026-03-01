@@ -59,13 +59,13 @@ app.use(express.json());
 // ==========================================
 
 // GET /api/categories
+// GET /api/categories
 app.get('/api/categories', async (_req: Request, res: Response) => {
   try {
-    // Note : On utilise des guillemets doubles pour respecter la casse des tables migréess
-    const result = await db.query('SELECT * FROM "Category"');
-    res.json(result.rows); // Postgres renvoie les données dans .rows
+    // Essayez en minuscules sans guillemets
+    const result = await db.query('SELECT * FROM category'); 
+    res.json(result.rows);
   } catch (err: any) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -74,11 +74,13 @@ app.get('/api/categories', async (_req: Request, res: Response) => {
 app.get('/api/products', async (req: Request, res: Response) => {
   try {
     const { category } = req.query;
-    let sql = 'SELECT * FROM "Products"';
+    // Idem ici : "products" au lieu de "Products"
+    let sql = 'SELECT * FROM products'; 
     let params: any[] = [];
     
     if (category) {
-      sql += ' WHERE category_id = $1'; // Postgres utilise $1 au lieu de ?
+      // Vérifiez aussi le nom de la colonne (probablement category_id)
+      sql += ' WHERE category_id = $1'; 
       params.push(category);
     }
     
