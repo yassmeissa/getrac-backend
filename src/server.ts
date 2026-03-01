@@ -95,8 +95,7 @@ app.get('/api/products', async (req: Request, res: Response) => {
 app.get('/api/products/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await db.query('SELECT * FROM "Products" WHERE "idProduct" = $1', [id]);
-    
+    const result = await db.query('SELECT * FROM products WHERE idproduct = $1', [id]);     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Produit non trouvé' });
     }
