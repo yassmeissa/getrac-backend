@@ -205,7 +205,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
 });
 
 // Route d'agrégation des ventes pour le dashboard admin
-app.get('/admin/dashboard', async (req: Request, res: Response) => {
+app.get('/api/admin/dashboard', async (req: Request, res: Response) => {
   try {
     // Vérification du token JWT (header Authorization: Bearer <token>)
     const authHeader = req.headers.authorization;
@@ -245,17 +245,7 @@ app.post('/api/orders', async (req: Request, res: Response) => {
   }
 });
 
-// Création de la table orders si elle n'existe pas
-await db.query(`
-  CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    amount NUMERIC(12,2) NOT NULL,
-    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    client VARCHAR(150),
-    products JSONB,
-    status VARCHAR(50) DEFAULT 'pending'
-  );
-`);
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} (PostgreSQL mode)`);
