@@ -176,6 +176,24 @@ app.post('/api/contact', async (req: Request, res: Response) => {
   }
 });
 
+// Route temporaire pour créer la table users
+app.get('/api/create-users-table', async (_req: Request, res: Response) => {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'user'
+      );
+    `);
+    res.json({ success: true, message: 'Table users créée !' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} (PostgreSQL mode)`);
 });
