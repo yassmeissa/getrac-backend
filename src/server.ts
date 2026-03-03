@@ -176,6 +176,19 @@ app.post('/api/contact', async (req: Request, res: Response) => {
   }
 });
 
+// Route temporaire pour insérer un admin
+app.get('/api/insert-admin', async (_req: Request, res: Response) => {
+  try {
+    await db.query(
+      `INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO NOTHING;`,
+      ['admin', 'admin@getrac.com', 'admin123', 'admin']
+    );
+    res.json({ success: true, message: 'Admin inséré !' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} (PostgreSQL mode)`);
 });
