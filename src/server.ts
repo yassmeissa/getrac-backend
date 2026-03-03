@@ -222,7 +222,8 @@ app.get('/api/admin/dashboard', async (req: Request, res: Response) => {
     const orders = await db.query('SELECT * FROM orders ORDER BY date DESC');
     const totalSales = await db.query('SELECT SUM(amount) AS total FROM orders');
     const countSales = await db.query('SELECT COUNT(*) AS count FROM orders');
-    res.json({ success: true, orders: orders.rows, totalSales: totalSales.rows[0].total, countSales: countSales.rows[0].count });
+    const distinctClients = await db.query('SELECT COUNT(DISTINCT client) AS clients FROM orders');
+    res.json({ success: true, orders: orders.rows, totalSales: totalSales.rows[0].total, countSales: countSales.rows[0].count, countClients: distinctClients.rows[0].clients });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
