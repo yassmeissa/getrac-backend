@@ -177,29 +177,25 @@ app.post('/api/contact', async (req: Request, res: Response) => {
   }
 });
 
-// Route temporaire pour insérer un admin
-app.get('/api/insert-admin', async (_req: Request, res: Response) => {
+// Route de connexion utilisateur
+app.post('/api/login', async (req: Request, res: Response) => {
   try {
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await db.query(
-      `INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO NOTHING;`,
-      ['admin', 'admin@getrac.com', hashedPassword, 'admin']
-    );
-    res.json({ success: true, message: 'Admin inséré avec mot de passe hashé !' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Route temporaire pour mettre à jour le mot de passe hashé de l'admin
-app.get('/api/update-admin-password', async (_req: Request, res: Response) => {
-  try {
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await db.query(
-      `UPDATE users SET password = $1 WHERE email = $2;`,
-      [hashedPassword, 'admin@getrac.com']
-    );
-    res.json({ success: true, message: 'Mot de passe admin hashé et mis à jour !' });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email et mot de passe requis.' });
+    }
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Utilisateur non trouvé.' });
+    }
+    const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ error: 'Mot de passe incorrect.' });
+    }
+    // On ne renvoie pas le mot de passe
+    const { password: _, ...userData } = user;
+    res.json({ success: true, user: userData });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
