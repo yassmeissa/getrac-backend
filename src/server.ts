@@ -204,6 +204,42 @@ app.post('/api/login', async (req: Request, res: Response) => {
   }
 });
 
+// Route d'agrégation des ventes pour le dashboard admin
+app.get('/admin/dashboard', async (req: Request, res: Response) => {
+  try {
+    // Vérification du token JWT (header Authorization: Bearer <token>)
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Token requis.' });
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret') as jwt.JwtPayload;
+      if (typeof decoded !== 'object' || !decoded.role) return res.status(403).json({ error: 'Accès interdit.' });
+      if (decoded.role !== 'admin') return res.status(403).json({ error: 'Accès interdit.' });
+    } catch {
+      return res.status(401).json({ error: 'Token invalide.' });
+    }
+    // Agrégation des ventes
+    const orders = await db.query('SELECT * FROM orders ORDER BY date DESC');
+    const totalSales = await db.query('SELECT SUM(amount) AS total FROM orders');
+    const countSales = await db.query('SELECT COUNT(*) AS count FROM orders');
+    res.json({ success: true, orders: orders.rows, totalSales: totalSales.rows[0].total, countSales: countSales.rows[0].count });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Création de la table orders si elle n'existe pas
+await db.query(`
+  CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    amount NUMERIC(12,2) NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    client VARCHAR(150),
+    products JSONB,
+    status VARCHAR(50) DEFAULT 'pending'
+  );
+`);
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} (PostgreSQL mode)`);
 });
