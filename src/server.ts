@@ -2,7 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import pg from 'pg'; // Changement : pg au lieu de mysql2
+import pg from 'pg'; 
 import nodemailer from 'nodemailer';
 import { createRequire } from 'module';
 import bcrypt from 'bcrypt';
@@ -24,7 +24,7 @@ const { Pool } = pg;
 const db = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Obligatoire pour la connexion sécurisée Render
+    rejectUnauthorized: false 
   }
 });
 
@@ -51,16 +51,13 @@ const paydunyaStore = new paydunya.Store({
 
 // Middlewares
 app.use(cors({
-  origin: [VERCEL_URL, 'http://localhost:5173'], // Autorise Vercel et le local pour les tests
+  origin: [VERCEL_URL, 'http://localhost:5173'], 
   credentials: true
 }));
 app.use(express.json());
 
-// ==========================================
-// ROUTES CATALOGUE (ADAPTÉES POSTGRES)
-// ==========================================
 
-// GET /api/categories
+
 // GET /api/categories
 app.get('/api/categories', async (_req: Request, res: Response) => {
   try {
@@ -246,6 +243,121 @@ app.post('/api/orders', async (req: Request, res: Response) => {
   }
 });
 
+// Middleware de vérification admin
+function isAdmin(req: Request, res: Response, next: Function) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Token requis.' });
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret') as jwt.JwtPayload;
+    if (typeof decoded !== 'object' || decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès admin requis.' });
+    }
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Token invalide.' });
+  }
+}
+
+// =============================
+// ROUTES CRUD PRODUITS (admin)
+// =============================
+app.post('/api/products', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { name, description, img, idcategory, price, qty } = req.body;
+    if (!name || !idcategory || !price || !qty) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants.' });
+    }
+    await db.query(
+      'INSERT INTO products (name, description, img, idcategory, price, qty) VALUES ($1, $2, $3, $4, $5, $6)',
+      [name, description || '', img || '', idcategory, price, qty]
+    );
+    res.json({ success: true, message: 'Produit ajouté.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.put('/api/products/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, img, idcategory, price, qty } = req.body;
+    await db.query(
+      'UPDATE products SET name=$1, description=$2, img=$3, idcategory=$4, price=$5, qty=$6 WHERE idproduct=$7',
+      [name, description, img, idcategory, price, qty, id]
+    );
+    res.json({ success: true, message: 'Produit modifié.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.delete('/api/products/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await db.query('DELETE FROM products WHERE idproduct = $1', [id]);
+    res.json({ success: true, message: 'Produit supprimé.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================
+// ROUTES CRUD CATEGORIES (admin)
+// =============================
+app.post('/api/categories', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nom requis.' });
+    await db.query('INSERT INTO category (name) VALUES ($1)', [name]);
+    res.json({ success: true, message: 'Catégorie ajoutée.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.put('/api/categories/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    await db.query('UPDATE category SET name=$1 WHERE idcategory=$2', [name, id]);
+    res.json({ success: true, message: 'Catégorie modifiée.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.delete('/api/categories/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await db.query('DELETE FROM category WHERE idcategory = $1', [id]);
+    res.json({ success: true, message: 'Catégorie supprimée.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================
+// ROUTES CRUD COMMANDES (admin)
+// =============================
+app.put('/api/orders/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount, client, products, status } = req.body;
+    await db.query(
+      'UPDATE orders SET amount=$1, client=$2, products=$3, status=$4 WHERE idorder=$5',
+      [amount, client, JSON.stringify(products), status, id]
+    );
+    res.json({ success: true, message: 'Commande modifiée.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.delete('/api/orders/:id', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await db.query('DELETE FROM orders WHERE idorder = $1', [id]);
+    res.json({ success: true, message: 'Commande supprimée.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 app.listen(PORT, () => {
