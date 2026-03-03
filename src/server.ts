@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import pg from 'pg'; // Changement : pg au lieu de mysql2
 import nodemailer from 'nodemailer';
 import { createRequire } from 'module';
+import bcrypt from 'bcrypt';
 
 const require = createRequire(import.meta.url);
 const paydunya = require('paydunya');
@@ -179,11 +180,26 @@ app.post('/api/contact', async (req: Request, res: Response) => {
 // Route temporaire pour insérer un admin
 app.get('/api/insert-admin', async (_req: Request, res: Response) => {
   try {
+    const hashedPassword = await bcrypt.hash('admin123', 10);
     await db.query(
       `INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO NOTHING;`,
-      ['admin', 'admin@getrac.com', 'admin123', 'admin']
+      ['admin', 'admin@getrac.com', hashedPassword, 'admin']
     );
-    res.json({ success: true, message: 'Admin inséré !' });
+    res.json({ success: true, message: 'Admin inséré avec mot de passe hashé !' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Route temporaire pour mettre à jour le mot de passe hashé de l'admin
+app.get('/api/update-admin-password', async (_req: Request, res: Response) => {
+  try {
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    await db.query(
+      `UPDATE users SET password = $1 WHERE email = $2;`,
+      [hashedPassword, 'admin@getrac.com']
+    );
+    res.json({ success: true, message: 'Mot de passe admin hashé et mis à jour !' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
