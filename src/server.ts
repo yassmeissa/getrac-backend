@@ -228,6 +228,23 @@ app.get('/admin/dashboard', async (req: Request, res: Response) => {
   }
 });
 
+// Route pour enregistrer une nouvelle commande
+app.post('/api/orders', async (req: Request, res: Response) => {
+  try {
+    const { amount, client, products, status } = req.body;
+    if (!amount || !products) {
+      return res.status(400).json({ error: 'Montant et produits requis.' });
+    }
+    await db.query(
+      'INSERT INTO orders (amount, client, products, status) VALUES ($1, $2, $3, $4)',
+      [amount, client || null, JSON.stringify(products), status || 'pending']
+    );
+    res.json({ success: true, message: 'Commande enregistrée.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Création de la table orders si elle n'existe pas
 await db.query(`
   CREATE TABLE IF NOT EXISTS orders (
