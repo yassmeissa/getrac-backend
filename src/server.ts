@@ -6,6 +6,7 @@ import pg from 'pg'; // Changement : pg au lieu de mysql2
 import nodemailer from 'nodemailer';
 import { createRequire } from 'module';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const require = createRequire(import.meta.url);
 const paydunya = require('paydunya');
@@ -193,9 +194,11 @@ app.post('/api/login', async (req: Request, res: Response) => {
     if (!match) {
       return res.status(401).json({ error: 'Mot de passe incorrect.' });
     }
+    // Création du token JWT
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '24h' });
     // On ne renvoie pas le mot de passe
     const { password: _, ...userData } = user;
-    res.json({ success: true, user: userData });
+    res.json({ success: true, user: userData, token });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
